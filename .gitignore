@@ -1,0 +1,19 @@
+# Dependencies
+**/node_modules/
+
+# Build files
+**/.next/
+**/dist/
+**/build/
+
+# Environment variables
+**/.env*
+
+# AI assistant files
+**/.agents/
+**/.claude/
+**/.windsurf/
+
+# Logs and coverage
+coverage/
+*.log
