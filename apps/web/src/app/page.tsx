@@ -1,5 +1,6 @@
 "use client";
 
+import { socket } from "./lib/socket";
 import { useEffect, useState } from "react";
 import { apiRequest } from "./lib/api";
 
@@ -16,10 +17,45 @@ const tasks = [
 ];
 
 export default function Home() {
+  useEffect(() => {
+    socket.connect();
+
+    socket.on("connect", () => {
+      console.log("Connected to Nexus real-time server:", socket.id);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from Nexus real-time server");
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.disconnect();
+    };
+  }, []);
   const [organizationName, setOrganizationName] = useState("Loading...");
   const [userName, setUserName] = useState("User");
   const [organizationId, setOrganizationId] = useState("");
   console.log("Organization ID:", organizationId);
+  useEffect(() => {
+    if (!organizationId) return;
+
+    const joinOrganization = () => {
+      socket.emit("organization:join", organizationId);
+      console.log("Joining organization room:", organizationId);
+    };
+
+    if (socket.connected) {
+      joinOrganization();
+    }
+
+    socket.on("connect", joinOrganization);
+
+    return () => {
+      socket.off("connect", joinOrganization);
+    };
+  }, [organizationId]);
   // const [projects, setProjects] = useState<
   //   { id: string; name: string; description?: string | null }[]
   // >([]);
@@ -42,6 +78,40 @@ export default function Home() {
       description?: string | null;
     }[]
   >([]);
+
+  useEffect(() => {
+    const handleIssueUpdate = ({
+      issue,
+    }: {
+      issue: {
+        id: string;
+        title: string;
+        priority: string;
+        status: string;
+        description?: string | null;
+      };
+    }) => {
+      setTasks((previousTasks) =>
+        previousTasks.map((task) =>
+          task.id === issue.id
+            ? {
+              ...task,
+              title: issue.title,
+              priority: issue.priority,
+              status: issue.status,
+              description: issue.description,
+            }
+            : task
+        )
+      );
+    };
+
+    socket.on("issue:updated", handleIssueUpdate);
+
+    return () => {
+      socket.off("issue:updated", handleIssueUpdate);
+    };
+  }, []);
 
   const [statusFilter, setStatusFilter] = useState("ALL");
 
@@ -808,84 +878,84 @@ export default function Home() {
                   : "No issues found for this status."}
               </p>
             ) : (
-                <div className = "space-y-4">
+              <div className="space-y-4">
                 {filteredTasks.map((task) => (
-            <div
-              key={task.id}
-              className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4 last:border-0 last:pb-0"
-            >
-              <div>
-                <p className="font-medium">{task.title}</p>
-                <p className="mt-1 text-xs text-gray-400">
-                  {task.project}
-                </p>
-              </div>
+                  <div
+                    key={task.id}
+                    className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4 last:border-0 last:pb-0"
+                  >
+                    <div>
+                      <p className="font-medium">{task.title}</p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        {task.project}
+                      </p>
+                    </div>
 
-              <div className="flex flex-wrap items-center gap-3 text-xs">
-                <span className="rounded-full bg-violet-500/15 px-3 py-1 text-violet-300">
-                  {task.priority}
-                </span>
+                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                      <span className="rounded-full bg-violet-500/15 px-3 py-1 text-violet-300">
+                        {task.priority}
+                      </span>
 
-                <select
-                  value={task.status}
-                  onChange={(e) =>
-                    handleUpdateIssueStatus(
-                      task.id,
-                      task.project,
-                      e.target.value
-                    )
-                  }
-                  className="rounded-lg border border-white/10 bg-[#111827] px-3 py-2 text-xs text-gray-300 outline-none focus:border-blue-500"
-                >
+                      <select
+                        value={task.status}
+                        onChange={(e) =>
+                          handleUpdateIssueStatus(
+                            task.id,
+                            task.project,
+                            e.target.value
+                          )
+                        }
+                        className="rounded-lg border border-white/10 bg-[#111827] px-3 py-2 text-xs text-gray-300 outline-none focus:border-blue-500"
+                      >
 
-                  <option value="BACKLOG">Backlog</option>
-                  <option value="TODO">To Do</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="IN_REVIEW">In Review</option>
-                  <option value="DONE">Done</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingIssueId(task.id);
-                    setEditingProjectId(task.projectId);
-                    setEditIssueTitle(task.title);
-                    setEditIssueDescription(task.description || "");
-                    setEditIssuePriority(task.priority);
-                    setEditIssueError("");
-                    setShowEditForm(true);
-                  }}
-                  className="rounded-lg border border-white/10 px-3 py-2 text-xs text-blue-400 hover:bg-white/5"
-                >
-                  Edit
-                </button>
+                        <option value="BACKLOG">Backlog</option>
+                        <option value="TODO">To Do</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="IN_REVIEW">In Review</option>
+                        <option value="DONE">Done</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingIssueId(task.id);
+                          setEditingProjectId(task.projectId);
+                          setEditIssueTitle(task.title);
+                          setEditIssueDescription(task.description || "");
+                          setEditIssuePriority(task.priority);
+                          setEditIssueError("");
+                          setShowEditForm(true);
+                        }}
+                        className="rounded-lg border border-white/10 px-3 py-2 text-xs text-blue-400 hover:bg-white/5"
+                      >
+                        Edit
+                      </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const confirmed = window.confirm(
-                      "Are you sure you want to delete this issue?"
-                    );
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            "Are you sure you want to delete this issue?"
+                          );
 
-                    if (confirmed) {
-                      handleDeleteIssue(task.id, task.projectId);
-                    }
-                  }}
-                  className="rounded-lg border border-red-500/30 px-3 py-2 text-xs text-red-400 hover:bg-red-500/10"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
+                          if (confirmed) {
+                            handleDeleteIssue(task.id, task.projectId);
+                          }
+                        }}
+                        className="rounded-lg border border-red-500/30 px-3 py-2 text-xs text-red-400 hover:bg-red-500/10"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                 ))}
-          </div>
+              </div>
             )}
-      </div>
+          </div>
 
-      <footer className="mt-8 text-center text-xs text-gray-500">
-        © 2026 Nexus. Built for better teamwork.
-      </footer>
-    </section>
+          <footer className="mt-8 text-center text-xs text-gray-500">
+            © 2026 Nexus. Built for better teamwork.
+          </footer>
+        </section>
       </div >
     </main >
   );

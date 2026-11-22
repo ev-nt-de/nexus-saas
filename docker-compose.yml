@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: nexus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: nexus_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - nexus_postgres_data:/var/lib/postgresql
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - nexus_redis_data:/data
+
+volumes:
+  nexus_postgres_data:
+  nexus_redis_data:

@@ -11,5 +11,10 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true
+  },
+  "dependencies": {
+    "bullmq": "^6.7.8",
+    "ioredis": "^6.0.0",
+    "socket.io": "^4.8.4"
   }
 }

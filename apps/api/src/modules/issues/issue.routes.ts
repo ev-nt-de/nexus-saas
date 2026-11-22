@@ -1,3 +1,5 @@
+import { nexusQueue } from "../../lib/queue.js";
+import { io } from "../../server.js";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
@@ -85,6 +87,26 @@ router.post(
                     assigneeId: validation.data.assigneeId,
                 },
             });
+
+            const slaMinutes: Record<string, number> = {
+                URGENT: 1,
+                HIGH: 5,
+                MEDIUM: 30,
+                LOW: 60,
+            };
+
+            await nexusQueue.add(
+                "sla-check",
+                {
+                    issueId: issue.id,
+                    organizationId,
+                    priority: issue.priority,
+                },
+                {
+                    delay: slaMinutes[issue.priority] * 60 * 1000,
+                    jobId: `sla-${issue.id}`,
+                }
+            );
 
             return res.status(201).json({
                 success: true,
@@ -189,7 +211,7 @@ router.get(
 router.put(
     "/:organizationId/projects/:projectId/issues/:issueId",
     authenticate,
-    requireRole(["ADMIN", "MANAGER"]),
+    requireRole(["ADMIN", "MANAGER", "MEMBER"]),
     async (req, res) => {
         try {
             const updateIssueSchema = z.object({
@@ -270,6 +292,12 @@ router.put(
                     id: issueId,
                 },
                 data: validation.data,
+            });
+
+            io.to(organizationId).emit("issue:updated", {
+                organizationId,
+                projectId,
+                issue: updatedIssue,
             });
 
             return res.status(200).json({

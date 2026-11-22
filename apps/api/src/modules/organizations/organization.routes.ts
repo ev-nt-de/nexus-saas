@@ -112,6 +112,81 @@ router.get("/", authenticate, async (req, res) => {
   }
 });
 
+// POST /api/organizations/:organizationId/members
+router.post(
+  "/:organizationId/members",
+  authenticate,
+  requireRole(["ADMIN"]),
+  async (req, res) => {
+    try {
+      const organizationId = Array.isArray(req.params.organizationId)
+        ? req.params.organizationId[0]
+        : req.params.organizationId;
+
+      const validation = z.object({
+        email: z.string().email("Enter a valid email address"),
+      }).safeParse(req.body);
+
+      if (!validation.success) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid email address",
+        });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: {
+          email: validation.data.email,
+        },
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "No registered user found with this email",
+        });
+      }
+
+      const existingMembership = await prisma.membership.findUnique({
+        where: {
+          userId_organizationId: {
+            userId: user.id,
+            organizationId,
+          },
+        },
+      });
+
+      if (existingMembership) {
+        return res.status(409).json({
+          success: false,
+          message: "User is already a member of this organization",
+        });
+      }
+
+      const membership = await prisma.membership.create({
+        data: {
+          userId: user.id,
+          organizationId,
+          role: "MEMBER",
+        },
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Member added successfully",
+        membership,
+      });
+    } catch (error) {
+      console.error("Add organization member error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to add organization member",
+      });
+    }
+  }
+);
+
 // GET /api/organizations/:organizationId/admin-test
 router.get(
   "/:organizationId/admin-test",
