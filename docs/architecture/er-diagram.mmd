@@ -1,0 +1,52 @@
+erDiagram
+    User ||--o{ Membership : joins
+    Organization ||--o{ Membership : contains
+    Organization ||--o{ Project : owns
+    Project ||--o{ Issue : contains
+    User o|--o{ Issue : assigned
+    User ||--o{ Comment : writes
+    Issue ||--o{ Comment : receives
+
+    User {
+        UUID id PK
+        string name
+        string email UK
+        string passwordHash
+    }
+
+    Organization {
+        UUID id PK
+        string name
+        string slug UK
+    }
+
+    Membership {
+        UUID id PK
+        UUID userId FK
+        UUID organizationId FK
+        OrganizationRole role
+    }
+
+    Project {
+        UUID id PK
+        string name
+        string description
+        UUID organizationId FK
+    }
+
+    Issue {
+        UUID id PK
+        string title
+        string description
+        IssueStatus status
+        IssuePriority priority
+        UUID projectId FK
+        UUID assigneeId FK
+    }
+
+    Comment {
+        UUID id PK
+        string content
+        UUID issueId FK
+        UUID userId FK
+    }

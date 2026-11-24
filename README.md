@@ -9,24 +9,26 @@ Key Features
 - Role-Based Access Control (RBAC): ADMIN, MANAGER, and MEMBER roles.
 - Project Management: Create and manage projects within organizations.
 - Issue Management: Create, update, and track issues with different priorities and statuses.
-- Real-Time Collaboration: Socket.IO enables issue updates to synchronize across connected organization members.
+- Real-Time Issue Updates: Socket.IO broadcasts issue updates to connected members of an organization.
 - Background Processing: Redis and BullMQ process delayed background jobs.
-- SLA Monitoring: Priority-based SLA checks identify overdue issues and skip issues already marked DONE.
+- Basic SLA Processing: BullMQ schedules priority-based SLA checks, and the worker logs alerts for unfinished issues.
 - Database: PostgreSQL with Prisma ORM.
 
-Technology Stack
+## Technology Stack
 
-Layer| Technologies
-Frontend| Next.js, React, TypeScript
-Backend| Node.js, Express, TypeScript
-Database| PostgreSQL
-ORM| Prisma
-Real-Time Communication| Socket.IO
-Background Jobs| BullMQ
-Job Queue / Cache| Redis
-Validation| Zod
-Authentication| JWT
-Containers| Docker Compose
+| Layer | Technologies |
+|---|---|
+| Frontend | Next.js, React, TypeScript |
+| Backend | Node.js, Express.js, TypeScript |
+| Database | PostgreSQL |
+| ORM | Prisma |
+| Real-Time Communication | Socket.IO |
+| Background Jobs | BullMQ |
+| Job Queue Storage | Redis |
+| Validation | Zod |
+| Authentication | JWT |
+| Containers | Docker Compose |
+| Shared Package | TypeScript shared types |
 
 Project Structure
 
@@ -73,15 +75,26 @@ npm install
 
 3. Configure environment variables
 
-Create the required ".env" files using your own local configuration.
 
-Required configuration includes:
+Create the required environment files:
 
-- PostgreSQL connection string ("DATABASE_URL")
-- JWT secret ("JWT_SECRET")
-- PostgreSQL password ("POSTGRES_PASSWORD")
+- .env (project root)
+- apps/api/.env
+- apps/worker/.env
 
-Never commit environment files or credentials to GitHub.
+Configure the following variables:
+
+Root .env:
+- POSTGRES_PASSWORD
+
+API (.env):
+- DATABASE_URL
+- JWT_SECRET
+
+Worker (.env):
+- DATABASE_URL
+
+Never commit environment files or credentials to GitHub
 
 4. Start PostgreSQL and Redis
 
@@ -89,24 +102,21 @@ docker compose up -d
 
 The provided Docker Compose configuration starts PostgreSQL and Redis.
 
-5. Start the applications
+5. Start the applications.
 
-Run each application in a separate terminal.
+Run each application in a separate terminal from the project root.
 
-Terminal 1 — Backend
+Terminal 1 — Backend API
 
-cd apps/api
-npm run dev
+npm.cmd run dev --workspace=api
 
 Terminal 2 — Frontend
 
-cd apps/web
-npm run dev
+npm.cmd run dev --workspace=web
 
 Terminal 3 — Background Worker
 
-cd apps/worker
-npm run dev
+npm.cmd run dev --workspace=worker
 
 The frontend runs on "http://localhost:3000" and the API runs on "http://localhost:5000".
 
@@ -161,14 +171,18 @@ Security
 - Organization membership verification.
 - Role-based route authorization.
 - Environment variables excluded from version control.
+- Never commit environment files or credentials to GitHub.
 
 Project Status
 
-Core authentication, organization management, project and issue management, real-time issue synchronization, role enforcement, and basic SLA background processing have been implemented and tested locally.
+Core authentication, organization management, project and issue management, role enforcement, real-time issue update handling, and basic SLA background processing have been implemented.
+
+Real-time synchronization across multiple browser sessions and complete application workflows are pending end-to-end verification.
 
 Future Improvements
 
 - Persistent SLA breach records and notification history.
+- Real-time synchronization testing across multiple browser sessions.
 - Automated token refresh.
 - Advanced analytics and reporting.
 - Production deployment and monitoring.

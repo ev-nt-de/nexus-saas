@@ -1,0 +1,22 @@
+flowchart TD
+    A[User opens Nexus frontend] --> B[Socket.IO client]
+    B --> C[Connect to API server]
+    C --> D[Socket connection established]
+    D --> E[Client sends organization:join]
+    E --> F[Backend reads JWT token]
+    F --> G{Valid token?}
+    G -->|No| H[organization:error]
+    G -->|Yes| I[Verify organization membership]
+    I --> J{Is member?}
+    J -->|No| H
+    J -->|Yes| K[Join organization room]
+    K --> L[Client receives issue updates]
+
+    M[User updates an issue] --> N[Backend updates PostgreSQL]
+    N --> O[Backend emits issue:updated]
+    O --> P[Broadcast to organization room]
+    P --> L
+    L --> Q[Frontend updates issue interface]
+
+    D --> R[Client disconnects]
+    R --> S[Backend logs disconnection]
